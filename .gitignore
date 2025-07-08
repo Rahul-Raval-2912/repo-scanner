@@ -1,8 +1,11 @@
+# secrect
 .env
 
 # Virtual environment
 venv310/
 
+#i don't know what is this just feel not necessory 
 __pycache__
 
+# database 
 db.sqlite3
