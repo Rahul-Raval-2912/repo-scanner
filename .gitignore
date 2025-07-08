@@ -2,3 +2,7 @@
 
 # Virtual environment
 venv310/
+
+__pycache__
+
+db.sqlite3

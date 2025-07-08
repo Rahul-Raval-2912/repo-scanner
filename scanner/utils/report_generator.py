@@ -4,9 +4,18 @@ from datetime import datetime
 from typing import List, Dict
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-from weasyprint import HTML, CSS
-from weasyprint.text.fonts import FontConfiguration
+#from weasyprint import HTML, CSS
+#from weasyprint.text.fonts import FontConfiguration
 import tempfile
+
+try:
+    from weasyprint import HTML, CSS
+    from weasyprint.text.fonts import FontConfiguration
+    WEASYPRINT_AVAILABLE = True
+except Exception as e:
+    WEASYPRINT_AVAILABLE = False
+    HTML = CSS = FontConfiguration = None
+    print("WeasyPrint is not available. PDF generation will be disabled.")
 
 class ReportGenerator:
     def __init__(self, scan_session, findings: List[Dict]):
