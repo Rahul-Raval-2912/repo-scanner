@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}Scan History - RepoGuardian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="display-5 fw-bold">
+                    <i class="bi bi-clock-history"></i> Scan History
+                </h1>
+                <a href="{% url 'scan_form' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> New Scan
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    {% if scans %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Scan ID</th>
+                                    <th>Type</th>
+                                    <th>Repository/File</th>
+                                    <th>Status</th>
+                                    <th>Files Scanned</th>
+                                    <th>Secrets Found</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scan in scans %}
+                                <tr>
+                                    <td>
+                                        <code class="small">{{ scan.id|truncatechars:13 }}</code>
+                                    </td>
+                                    <td>
+                                        {% if scan.scan_type == 'git_url' %}
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-git"></i> Git
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-file-zip"></i> ZIP
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.repository_url %}
+                                        <div class="text-truncate" style="max-width: 200px;" title="{{ scan.repository_url }}">
+                                            {{ scan.repository_url }}
+                                        </div>
+                                        {% else %}
+                                        <small class="text-muted">
+                                            {{ scan.uploaded_file.name|default:"Uploaded file" }}
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completed
+                                        </span>
+                                        {% elif scan.status == 'processing' %}
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-hourglass-split"></i> Processing
+                                        </span>
+                                        {% elif scan.status == 'failed' %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> Failed
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-clock"></i> Pending
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ scan.total_files_scanned }}</span>
+                                    </td>
+                                    <td>
+                                        {% if scan.secrets_found > 0 %}
+                                        <span class="badge bg-warning">{{ scan.secrets_found }}</span>
+                                        {% else %}
+                                        <span class="text-success fw-bold">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ scan.created_at|date:"M d, Y" }}<br>
+                                            {{ scan.created_at|time:"H:i" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'scan_result' scan.id %}" class="btn btn-sm btn-outline-primary" title="View scan results">
+                                                <i class="bi bi-eye"></i>
+                                                <span class="sr-only">View</span>
+                                            </a>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-label="Download report options">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="{% url 'download_report' scan.id 'pdf' %}">PDF</a></li>
+                                                    <li><a class="dropdown-item" href="{% url 'download_report' scan.id 'json' %}">JSON</a></li>
+                                                    <li><a class="dropdown-item" href="{% url 'download_report' scan.id 'html' %}">HTML</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        {% elif scan.status == 'processing' %}
+                                        <button class="btn btn-sm btn-outline-info" onclick="checkScanStatus('{{ scan.id }}')">
+                                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if scans.has_other_pages %}
+                    <nav aria-label="Scan history pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if scans.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ scans.previous_page_number }}">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% for num in scans.paginator.page_range %}
+                                {% if scans.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% elif num > scans.number|add:'-3' and num < scans.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if scans.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ scans.next_page_number }}">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                        <h3 class="text-muted mt-3">No Scans Yet</h3>
+                        <p class="text-muted">You haven't performed any security scans yet.</p>
+                        <a href="{% url 'scan_form' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create Your First Scan
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function checkScanStatus(scanId) {
+    fetch(`/api/scan/${scanId}/status/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed') {
+                location.reload();
+            } else {
+                // Show current status
+                console.log('Scan status:', data.status);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking scan status:', error);
+        });
+}
+
+// Auto-refresh processing scans every 30 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const processingScanRows = document.querySelectorAll('tr:has(.badge:contains("Processing"))');
+    
+    if (processingScanRows.length > 0) {
+        setInterval(() => {
+            location.reload();
+        }, 30000); // 30 seconds
+    }
+});
+</script>
+{% endblock %}

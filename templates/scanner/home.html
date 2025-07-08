@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">
+                    Secure Your Code with RepoGuardian
+                </h1>
+                <p class="lead mb-4">
+                    Advanced Git repository security scanner that detects API keys, secrets, and sensitive data in your codebase. 
+                    Protect your applications from security breaches before they happen.
+                </p>
+                <div class="d-flex gap-3">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'scan_form' %}" class="btn btn-light btn-lg">
+                        <i class="bi bi-search"></i> Start Scanning
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    {% else %}
+                    <a href="{% url 'register' %}" class="btn btn-light btn-lg">
+                        <i class="bi bi-person-plus"></i> Get Started
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <i class="bi bi-shield-check" style="font-size: 12rem; opacity: 0.8;"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-lg-8 mx-auto">
+                <h2 class="display-5 fw-bold mb-3">Why Choose RepoGuardian?</h2>
+                <p class="lead text-muted">
+                    Comprehensive security scanning with advanced detection algorithms and detailed reporting.
+                </p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center p-4">
+                    <div class="card-body">
+                        <i class="bi bi-git text-primary" style="font-size: 3rem;"></i>
+                        <h4 class="card-title mt-3">Git Integration</h4>
+                        <p class="card-text">
+                            Seamlessly scan Git repositories by URL or upload ZIP files for local analysis.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center p-4">
+                    <div class="card-body">
+                        <i class="bi bi-search text-success" style="font-size: 3rem;"></i>
+                        <h4 class="card-title mt-3">Smart Detection</h4>
+                        <p class="card-text">
+                            Advanced regex patterns detect AWS keys, JWT tokens, database URLs, and more.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center p-4">
+                    <div class="card-body">
+                        <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 3rem;"></i>
+                        <h4 class="card-title mt-3">Detailed Reports</h4>
+                        <p class="card-text">
+                            Generate comprehensive reports in HTML, PDF, and JSON formats.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center p-4">
+                    <div class="card-body">
+                        <i class="bi bi-envelope text-warning" style="font-size: 3rem;"></i>
+                        <h4 class="card-title mt-3">Email Alerts</h4>
+                        <p class="card-text">
+                            Receive instant notifications for high-severity security findings.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center p-4">
+                    <div class="card-body">
+                        <i class="bi bi-clock-history text-info" style="font-size: 3rem;"></i>
+                        <h4 class="card-title mt-3">Scan History</h4>
+                        <p class="card-text">
+                            Track all your scans with detailed history and comparison features.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center p-4">
+                    <div class="card-body">
+                        <i class="bi bi-shield-lock text-secondary" style="font-size: 3rem;"></i>
+                        <h4 class="card-title mt-3">Secure & Private</h4>
+                        <p class="card-text">
+                            Your code is processed securely and temporarily, ensuring complete privacy.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="stats-card card p-4">
+                    <h3 class="text-primary fw-bold">10+</h3>
+                    <p class="mb-0">Secret Types Detected</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card card p-4">
+                    <h3 class="text-success fw-bold">99.9%</h3>
+                    <p class="mb-0">Accuracy Rate</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card card p-4">
+                    <h3 class="text-warning fw-bold">24/7</h3>
+                    <p class="mb-0">Monitoring</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card card p-4">
+                    <h3 class="text-info fw-bold">Fast</h3>
+                    <p class="mb-0">Scanning Speed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-6 fw-bold mb-4">Ready to Secure Your Code?</h2>
+                <p class="lead mb-4">
+                    Join thousands of developers who trust RepoGuardian to keep their repositories secure.
+                </p>
+                {% if not user.is_authenticated %}
+                <a href="{% url 'register' %}" class="btn btn-primary btn-lg me-3">
+                    <i class="bi bi-person-plus"></i> Sign Up Free
+                </a>
+                {% endif %}
+                <a href="{% url 'about' %}" class="btn btn-outline-primary btn-lg">
+                    <i class="bi bi-info-circle"></i> Learn More
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

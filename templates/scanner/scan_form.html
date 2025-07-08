@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}New Scan - RepoGuardian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="display-5 fw-bold text-center mb-5">
+                <i class="bi bi-search"></i> New Security Scan
+            </h1>
+            
+            <!-- Scan Type Selection -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">Choose Scan Method</h3>
+                    
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs" id="scanTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="git-tab" data-bs-toggle="tab" data-bs-target="#git-pane" type="button" role="tab">
+                                <i class="bi bi-git"></i> Git Repository
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="zip-tab" data-bs-toggle="tab" data-bs-target="#zip-pane" type="button" role="tab">
+                                <i class="bi bi-file-zip"></i> ZIP Upload
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab content -->
+                    <div class="tab-content mt-4" id="scanTabContent">
+                        <!-- Git Repository Tab -->
+                        <div class="tab-pane fade show active" id="git-pane" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <form method="post" id="gitForm">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="scan_type" value="git_url">
+                                        {{ git_form|crispy }}
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="bi bi-search"></i> Scan Repository
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="alert alert-info">
+                                        <h6><i class="bi bi-info-circle"></i> Git Repository Scanning</h6>
+                                        <ul class="mb-0 small">
+                                            <li>Supports public repositories</li>
+                                            <li>HTTPS URLs only</li>
+                                            <li>Clones latest commit</li>
+                                            <li>Temporary storage</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ZIP Upload Tab -->
+                        <div class="tab-pane fade" id="zip-pane" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <form method="post" enctype="multipart/form-data" id="zipForm">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="scan_type" value="zip_upload">
+                                        {{ zip_form|crispy }}
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="bi bi-upload"></i> Upload & Scan
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="alert alert-warning">
+                                        <h6><i class="bi bi-exclamation-triangle"></i> ZIP File Requirements</h6>
+                                        <ul class="mb-0 small">
+                                            <li>Maximum size: 50MB</li>
+                                            <li>ZIP format only</li>
+                                            <li>Source code files</li>
+                                            <li>No executables</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- What We Scan For -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">
+                        <i class="bi bi-shield-check"></i> What We Scan For
+                    </h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-danger">High Severity</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-dot text-danger"></i> AWS Access Keys & Secrets</li>
+                                <li><i class="bi bi-dot text-danger"></i> GCP Service Account Keys</li>
+                                <li><i class="bi bi-dot text-danger"></i> Database Connection URLs</li>
+                                <li><i class="bi bi-dot text-danger"></i> Private Keys (.pem, .key)</li>
+                                <li><i class="bi bi-dot text-danger"></i> SSH Keys</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5 class="text-warning">Medium Severity</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-dot text-warning"></i> JWT Tokens</li>
+                                <li><i class="bi bi-dot text-warning"></i> API Keys</li>
+                                <li><i class="bi bi-dot text-warning"></i> OAuth Tokens</li>
+                                <li><i class="bi bi-dot text-warning"></i> Email/Password Combinations</li>
+                            </ul>
+                            
+                            <h5 class="text-success mt-3">Low Severity</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-dot text-success"></i> Configuration Files</li>
+                                <li><i class="bi bi-dot text-success"></i> Environment Variables</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add loading states to forms
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}Scan Results - RepoGuardian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-6 fw-bold">
+                        <i class="bi bi-file-text"></i> Scan Results
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Scan ID: {{ scan_session.id }} | 
+                        {{ scan_session.created_at|date:"M d, Y H:i" }}
+                    </p>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-download"></i> Download Report
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'download_report' scan_session.id 'pdf' %}">
+                            <i class="bi bi-file-pdf"></i> PDF Report
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'download_report' scan_session.id 'json' %}">
+                            <i class="bi bi-file-code"></i> JSON Report
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'download_report' scan_session.id 'html' %}">
+                            <i class="bi bi-file-text"></i> HTML Report
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-files text-primary" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ scan_session.total_files_scanned }}</h3>
+                    <p class="text-muted mb-0">Files Scanned</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2 severity-high">{{ severity_counts.high }}</h3>
+                    <p class="text-muted mb-0">High Severity</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-circle text-warning" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2 severity-medium">{{ severity_counts.medium }}</h3>
+                    <p class="text-muted mb-0">Medium Severity</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-info-circle text-success" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2 severity-low">{{ severity_counts.low }}</h3>
+                    <p class="text-muted mb-0">Low Severity</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Repository Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        {% if scan_session.scan_type == 'git_url' %}
+                        <i class="bi bi-git"></i> Repository Information
+                        {% else %}
+                        <i class="bi bi-file-zip"></i> Upload Information
+                        {% endif %}
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Scan Type:</strong> 
+                                {% if scan_session.scan_type == 'git_url' %}
+                                Git Repository
+                                {% else %}
+                                ZIP Upload
+                                {% endif %}
+                            </p>
+                            {% if scan_session.repository_url %}
+                            <p><strong>Repository URL:</strong> 
+                                <code>{{ scan_session.repository_url }}</code>
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong> 
+                                <span class="badge bg-success">{{ scan_session.get_status_display }}</span>
+                            </p>
+                            <p><strong>Completed:</strong> {{ scan_session.completed_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Findings -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="bi bi-bug"></i> Security Findings ({{ total_findings }})
+                    </h3>
+                </div>
+                <div class="card-body">
+                    {% if findings %}
+                    {% for finding in findings %}
+                    <div class="finding-card card severity-{{ finding.severity }} mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5 class="card-title">
+                                        <span class="severity-{{ finding.severity }}">
+                                            {{ finding.get_secret_type_display }}
+                                        </span>
+                                        <span class="badge bg-{{ finding.severity|yesno:'danger,warning,success' }} ms-2">
+                                            {{ finding.get_severity_display }}
+                                        </span>
+                                    </h5>
+                                    <p class="card-text">
+                                        <i class="bi bi-file-code"></i> 
+                                        <strong>{{ finding.file_path }}</strong> 
+                                        (Line {{ finding.line_number }})
+                                    </p>
+                                    
+                                    <!-- Code Context -->
+                                    <div class="code-block">{{ finding.matched_text }}</div>
+                                    
+                                    {% if finding.context_before or finding.context_after %}
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#context-{{ finding.id }}">
+                                            <i class="bi bi-eye"></i> Show Context
+                                        </button>
+                                        <div class="collapse mt-2" id="context-{{ finding.id }}">
+                                            <div class="code-block">
+                                                {% if finding.context_before %}{{ finding.context_before }}{% endif %}
+                                                <strong>{{ finding.matched_text }}</strong>
+                                                {% if finding.context_after %}{{ finding.context_after }}{% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-4 text-end">
+                                    <button class="btn btn-sm btn-outline-warning false-positive-btn" 
+                                            data-finding-id="{{ finding.id }}"
+                                            data-is-false-positive="{{ finding.is_false_positive|yesno:'true,false' }}">
+                                        {% if finding.is_false_positive %}
+                                        <i class="bi bi-check-circle"></i> False Positive
+                                        {% else %}
+                                        <i class="bi bi-flag"></i> Mark False Positive
+                                        {% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Pagination -->
+                    {% if findings.has_other_pages %}
+                    <nav aria-label="Findings pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if findings.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ findings.previous_page_number }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in findings.paginator.page_range %}
+                            {% if findings.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > findings.number|add:'-3' and num < findings.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if findings.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ findings.next_page_number }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-shield-check text-success" style="font-size: 4rem;"></i>
+                        <h3 class="text-success mt-3">No Security Issues Found!</h3>
+                        <p class="text-muted">Your repository appears to be clean of common security vulnerabilities.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle false positive marking
+    const falsePositiveBtns = document.querySelectorAll('.false-positive-btn');
+    
+    falsePositiveBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const findingId = this.dataset.findingId;
+            const isFalsePositive = this.dataset.isFalsePositive === 'true';
+            
+            fetch(`/api/finding/${findingId}/false-positive/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.is_false_positive) {
+                        this.innerHTML = '<i class="bi bi-check-circle"></i> False Positive';
+                        this.classList.remove('btn-outline-warning');
+                        this.classList.add('btn-warning');
+                    } else {
+                        this.innerHTML = '<i class="bi bi-flag"></i> Mark False Positive';
+                        this.classList.remove('btn-warning');
+                        this.classList.add('btn-outline-warning');
+                    }
+                    this.dataset.isFalsePositive = data.is_false_positive.toString();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update finding. Please try again.');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

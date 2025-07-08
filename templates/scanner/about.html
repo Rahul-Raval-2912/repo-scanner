@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}About - RepoGuardian{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="display-4 fw-bold text-center mb-5">About RepoGuardian</h1>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-5">
+                    <h2 class="h3 mb-4"><i class="bi bi-bullseye text-primary"></i> Our Mission</h2>
+                    <p class="lead">
+                        RepoGuardian is designed to help developers and organizations identify and eliminate 
+                        security vulnerabilities in their code repositories before they become costly breaches.
+                    </p>
+                    <p>
+                        In today's fast-paced development environment, it's easy for sensitive information 
+                        like API keys, database credentials, and private keys to accidentally end up in 
+                        version control. Our advanced scanning engine helps you catch these issues early.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-5">
+                    <h2 class="h3 mb-4"><i class="bi bi-gear text-success"></i> How It Works</h2>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>1. Submit Your Code</h4>
+                            <p>Upload a ZIP file or provide a Git repository URL for scanning.</p>
+                            
+                            <h4>2. Advanced Scanning</h4>
+                            <p>Our regex-based engine analyzes your code for various types of secrets and sensitive data.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h4>3. Detailed Reports</h4>
+                            <p>Receive comprehensive reports with file locations, line numbers, and severity levels.</p>
+                            
+                            <h4>4. Take Action</h4>
+                            <p>Use our findings to secure your codebase and prevent security breaches.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-5">
+                    <h2 class="h3 mb-4"><i class="bi bi-search text-warning"></i> What We Detect</h2>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success"></i> AWS Access Keys & Secrets</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Google Cloud Platform Keys</li>
+                                <li><i class="bi bi-check-circle text-success"></i> JWT Tokens</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Database Connection URLs</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Email/Password Combinations</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success"></i> Private Keys (.pem, .key)</li>
+                                <li><i class="bi bi-check-circle text-success"></i> API Keys</li>
+                                <li><i class="bi bi-check-circle text-success"></i> OAuth Tokens</li>
+                                <li><i class="bi bi-check-circle text-success"></i> SSH Keys</li>
+                                <li><i class="bi bi-check-circle text-success"></i> And much more...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-5">
+                    <h2 class="h3 mb-4"><i class="bi bi-shield-lock text-info"></i> Security & Privacy</h2>
+                    <p>
+                        We take your privacy seriously. All uploaded files and cloned repositories are:
+                    </p>
+                    <ul>
+                        <li>Processed in secure, isolated environments</li>
+                        <li>Automatically deleted after scanning</li>
+                        <li>Never stored permanently on our servers</li>
+                        <li>Transmitted using encrypted connections</li>
+                    </ul>
+                    <p>
+                        Only scan results and metadata are retained to provide you with historical tracking 
+                        and reporting capabilities.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h2 class="h3 mb-4"><i class="bi bi-code-slash text-danger"></i> Technology Stack</h2>
+                    <p>RepoGuardian is built using modern, reliable technologies:</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><strong>Backend:</strong> Django (Python)</li>
+                                <li><strong>Database:</strong> SQLite/PostgreSQL</li>
+                                <li><strong>Git Integration:</strong> GitPython</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><strong>Frontend:</strong> Bootstrap 5</li>
+                                <li><strong>Reports:</strong> WeasyPrint (PDF)</li>
+                                <li><strong>Email:</strong> Django Email Framework</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

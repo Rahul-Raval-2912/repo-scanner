@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - RepoGuardian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="display-5 fw-bold">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </h1>
+                <a href="{% url 'scan_form' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> New Scan
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-search text-primary" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ total_scans }}</h3>
+                    <p class="text-muted mb-0">Total Scans</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ total_secrets }}</h3>
+                    <p class="text-muted mb-0">Secrets Found</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-exclamation text-danger" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ high_severity_secrets }}</h3>
+                    <p class="text-muted mb-0">High Severity</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-check text-success" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ total_scans|add:"-1"|add:"1" }}</h3>
+                    <p class="text-muted mb-0">Active</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Scans -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="bi bi-clock-history"></i> Recent Scans
+                    </h3>
+                    <a href="{% url 'scan_history' %}" class="btn btn-outline-primary btn-sm">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_scans %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Repository/File</th>
+                                    <th>Status</th>
+                                    <th>Secrets Found</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for scan in recent_scans %}
+                                <tr>
+                                    <td>
+                                        {% if scan.scan_type == 'git_url' %}
+                                        <i class="bi bi-git text-primary"></i> Git
+                                        {% else %}
+                                        <i class="bi bi-file-zip text-secondary"></i> ZIP
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.repository_url %}
+                                        <small class="text-muted">{{ scan.repository_url|truncatechars:50 }}</small>
+                                        {% else %}
+                                        <small class="text-muted">{{ scan.uploaded_file.name|default:"Uploaded file" }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif scan.status == 'processing' %}
+                                        <span class="badge bg-warning">Processing</span>
+                                        {% elif scan.status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if scan.secrets_found > 0 %}
+                                        <span class="badge bg-warning">{{ scan.secrets_found }}</span>
+                                        {% else %}
+                                        <span class="text-success">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ scan.created_at|date:"M d, Y H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if scan.status == 'completed' %}
+                                        <a href="{% url 'scan_result' scan.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <h4 class="text-muted mt-3">No scans yet</h4>
+                        <p class="text-muted">Start by creating your first security scan.</p>
+                        <a href="{% url 'scan_form' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create First Scan
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
