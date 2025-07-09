@@ -165,7 +165,6 @@ def process_git_scan(request, repository_url):
         scan_session.save()
         messages.error(request, f'Scan failed: {str(e)}')
         return redirect('scan_form')
-
 def process_zip_scan(request, zip_file):
     """Process ZIP file scan."""
     # Create scan session
@@ -175,41 +174,44 @@ def process_zip_scan(request, zip_file):
         uploaded_file=zip_file,
         status='processing'
     )
-    
+
     try:
+        # ✅ Use .path if file is saved to disk (e.g., media/uploads/)
+        file_path = scan_session.uploaded_file.path
+
         # Extract ZIP file
         zip_handler = ZipHandler()
-        temp_dir, error = zip_handler.extract_zip(zip_file.temporary_file_path())
-        
+        temp_dir, error = zip_handler.extract_zip(file_path)
+
         if error:
             scan_session.status = 'failed'
             scan_session.save()
             messages.error(request, f'Failed to extract ZIP file: {error}')
             return redirect('scan_form')
-        
+
         # Scan for secrets
         detector = SecretDetector()
         findings = detector.scan_directory(temp_dir)
-        
+
         # Save findings to database
         save_findings_to_db(scan_session, findings)
-        
+
         # Update scan session
         scan_session.status = 'completed'
         scan_session.completed_at = timezone.now()
         scan_session.total_files_scanned = count_scanned_files(temp_dir)
         scan_session.secrets_found = len(findings)
         scan_session.save()
-        
+
         # Send email notifications
         send_scan_notifications(request.user, scan_session, findings)
-        
+
         # Cleanup
         zip_handler.cleanup_temp_dirs()
-        
+
         messages.success(request, f'Scan completed! Found {len(findings)} potential secrets.')
         return redirect('scan_result', scan_id=scan_session.id)
-        
+
     except Exception as e:
         scan_session.status = 'failed'
         scan_session.save()

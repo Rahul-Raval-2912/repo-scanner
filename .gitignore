@@ -9,3 +9,6 @@ __pycache__
 
 # database 
 db.sqlite3
+
+#clone repo
+media
