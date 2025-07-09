@@ -4,7 +4,7 @@
 # Virtual environment
 venv310/
 
-#i don't know what is this just feel not necessory 
+#i don't know what is this just feel not necessary 
 __pycache__
 
 # database 
