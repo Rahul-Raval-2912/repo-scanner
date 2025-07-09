@@ -45,16 +45,18 @@ class ReportGenerator:
     
     def generate_pdf_report(self) -> bytes:
         """Generate PDF report and return as bytes."""
+        if not WEASYPRINT_AVAILABLE:
+            raise Exception("WeasyPrint is not available. Cannot generate PDF.")
+        
         html_content = self.generate_html_report()
         
         # Create temporary HTML file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
             f.write(html_content)
             html_file_path = f.name
         
         try:
             # Generate PDF
-            font_config = FontConfiguration()
             html_doc = HTML(filename=html_file_path)
             css = CSS(string='''
                 @page {
@@ -92,9 +94,9 @@ class ReportGenerator:
                     font-size: 12px;
                     white-space: pre-wrap;
                 }
-            ''', font_config=font_config)
+            ''')
             
-            pdf_bytes = html_doc.write_pdf(stylesheets=[css], font_config=font_config)
+            pdf_bytes = html_doc.write_pdf(stylesheets=[css])
             return pdf_bytes
             
         finally:
