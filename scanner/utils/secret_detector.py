@@ -4,6 +4,8 @@ from typing import List, Dict, Tuple
 
 class SecretDetector:
     def __init__(self):
+        self.auto_remediation = []
+
         self.patterns = {
             'aws_key': {
                 'pattern': r'AKIA[0-9A-Z]{16}',
@@ -75,23 +77,21 @@ class SecretDetector:
         findings = []
         
         for root, dirs, files in os.walk(directory_path):
-            # Skip excluded directories
             dirs[:] = [d for d in dirs if d not in self.excluded_dirs]
-            
+
             for file in files:
                 file_path = os.path.join(root, file)
                 relative_path = os.path.relpath(file_path, directory_path)
-                
-                # Skip binary files and files without relevant extensions
-                if not self._should_scan_file(file):
+
+                if not self._should_scan_file(file_path):
                     continue
-                
+
                 try:
                     file_findings = self.scan_file(file_path, relative_path)
                     findings.extend(file_findings)
                 except Exception as e:
                     print(f"Error scanning {file_path}: {e}")
-                    continue
+
         
         return findings
 
@@ -174,3 +174,40 @@ class SecretDetector:
             scores[severity] += 1
         
         return scores
+
+    def _should_scan_file(self, file_path: str) -> bool:
+        """
+        Decide whether a file should be scanned:
+        - Skips common noisy or irrelevant files (like package-lock.json)
+        - Skips virtual environment files
+        - Adds smart remediation suggestions
+        """
+        filename = os.path.basename(file_path).lower()
+        normalized_path = file_path.replace('\\', '/').lower()
+
+        # 🔴 Skip known noisy file
+        if filename == 'package-lock.json':
+            self.auto_remediation.append({
+                'file': file_path,
+                'reason': "Large noisy file often containing generated hashes.",
+                'suggestion': "Add package-lock.json to .gitignore if not needed."
+            })
+            return False
+
+        # 🟡 Skip files inside virtual environments
+        for venv_name in ['venv', '.venv', 'env']:
+            if f"/{venv_name}/" in normalized_path or f"\\{venv_name}\\" in file_path:
+                self.auto_remediation.append({
+                    'file': file_path,
+                    'reason': "Part of Python virtual environment.",
+                    'suggestion': f"Don't commit the {venv_name} folder. Add it to .gitignore."
+                })
+                return False
+
+        # 🟢 Allow only certain extensions or special names
+        _, ext = os.path.splitext(filename)
+        if ext in self.file_extensions or filename in ['.env', 'dockerfile', 'makefile']:
+            return True
+
+        # ⚪ Skip everything else by default
+        return False
