@@ -6,6 +6,39 @@ class SecretDetector:
     def __init__(self):
         self.auto_remediation = []
 
+        self.skip_rules = [
+    {
+        'match_type': 'filename',
+        'value': 'package-lock.json',
+        'reason': 'Minified or auto-generated file',
+        'suggestion': 'Add package-lock.json to .gitignore if not needed',
+    },
+    {
+        'match_type': 'filename',
+        'value': 'highlight.pack.min.js',
+        'reason': 'Minified library file',
+        'suggestion': 'Add highlight.pack.min.js to .gitignore if not needed',
+    },
+    {
+        'match_type': 'path_contains',
+        'value': '/venv/',
+        'reason': 'Python virtual environment file',
+        'suggestion': 'Exclude venv from Git and scans',
+    },
+    {
+        'match_type': 'path_contains',
+        'value': '/.venv/',
+        'reason': 'Python virtual environment file',
+        'suggestion': 'Exclude .venv from Git and scans',
+    },
+    {
+        'match_type': 'path_contains',
+        'value': '/env/',
+        'reason': 'Python virtual environment file',
+        'suggestion': 'Exclude env from Git and scans',
+    },
+]
+
         self.patterns = {
             'aws_key': {
                 'pattern': r'AKIA[0-9A-Z]{16}',
@@ -176,38 +209,25 @@ class SecretDetector:
         return scores
 
     def _should_scan_file(self, file_path: str) -> bool:
-        """
-        Decide whether a file should be scanned:
-        - Skips common noisy or irrelevant files (like package-lock.json)
-        - Skips virtual environment files
-        - Adds smart remediation suggestions
-        """
+        
         filename = os.path.basename(file_path).lower()
         normalized_path = file_path.replace('\\', '/').lower()
 
-        # 🔴 Skip known noisy file
-        if filename == 'package-lock.json':
-            self.auto_remediation.append({
-                'file': file_path,
-                'reason': "Large noisy file often containing generated hashes.",
-                'suggestion': "Add package-lock.json to .gitignore if not needed."
-            })
-            return False
-
-        # 🟡 Skip files inside virtual environments
-        for venv_name in ['venv', '.venv', 'env']:
-            if f"/{venv_name}/" in normalized_path or f"\\{venv_name}\\" in file_path:
+        for rule in self.skip_rules:
+            if rule['match_type'] == 'filename' and filename == rule['value']:
                 self.auto_remediation.append({
                     'file': file_path,
-                    'reason': "Part of Python virtual environment.",
-                    'suggestion': f"Don't commit the {venv_name} folder. Add it to .gitignore."
+                    'reason': rule['reason'],
+                    'suggestion': rule['suggestion']
+                })
+                return False
+            elif rule['match_type'] == 'path_contains' and rule['value'] in normalized_path:
+                self.auto_remediation.append({
+                    'file': file_path,
+                    'reason': rule['reason'],
+                    'suggestion': rule['suggestion']
                 })
                 return False
 
-        # 🟢 Allow only certain extensions or special names
         _, ext = os.path.splitext(filename)
-        if ext in self.file_extensions or filename in ['.env', 'dockerfile', 'makefile']:
-            return True
-
-        # ⚪ Skip everything else by default
-        return False
+        return ext in self.file_extensions or filename in ['.env', 'dockerfile', 'makefile']
