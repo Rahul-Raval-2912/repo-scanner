@@ -53,7 +53,7 @@ python manage.py runserver
 ### Email Settings
 ```python
 DEFAULT_FROM_EMAIL = 'noreply@repoguardian.com'
-ADMIN_EMAIL = 'admin@repoguardian.com'
+ADMIN_EMAIL = 'rahul9raval@gmail.com'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 ```
 
@@ -92,7 +92,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For issues and questions:
 - Create an issue on GitHub
-- Contact: support@repoguardian.com
+- Contact: rahul9raval@gmail.com
 
 ---
 
