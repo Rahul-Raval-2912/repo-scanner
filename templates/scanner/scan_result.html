@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
 
 {% block title %}Scan Results - RepoGuardian{% endblock %}
 
@@ -97,6 +98,8 @@
                             <p><strong>Scan Type:</strong> 
                                 {% if scan_session.scan_type == 'git_url' %}
                                 Git Repository
+                                {% elif scan_session.scan_type == 'git_deep' %}
+                                Git Deep Scan
                                 {% else %}
                                 ZIP Upload
                                 {% endif %}
@@ -105,6 +108,9 @@
                             <p><strong>Repository URL:</strong> 
                                 <code>{{ scan_session.repository_url }}</code>
                             </p>
+                            {% endif %}
+                            {% if scan_session.is_deep_scan %}
+                            <p><strong>Commits Scanned:</strong> {{ scan_session.commits_scanned }}</p>
                             {% endif %}
                         </div>
                         <div class="col-md-6">
@@ -129,6 +135,7 @@
                     </h3>
                 </div>
                 <div class="card-body">
+                    {% csrf_token %}
                     {% if findings %}
                     {% for finding in findings %}
                     <div class="finding-card card severity-{{ finding.severity }} mb-3">
@@ -148,6 +155,17 @@
                                         <strong>{{ finding.file_path }}</strong> 
                                         (Line {{ finding.line_number }})
                                     </p>
+                                    
+                                    {% if finding.commit_hash %}
+                                    <p class="card-text text-muted small">
+                                        <i class="bi bi-git"></i> 
+                                        Commit: <code>{{ finding.commit_hash|slice:":8" }}</code> 
+                                        by {{ finding.commit_author }} 
+                                        on {{ finding.commit_date|date:"M d, Y" }}
+                                        <br>
+                                        <em>{{ finding.commit_message|truncatechars:100 }}</em>
+                                    </p>
+                                    {% endif %}
                                     
                                     <!-- Code Context -->
                                     <div class="code-block">{{ finding.matched_text }}</div>
@@ -228,9 +246,44 @@
     </div>
 </div>
 {% endblock %}
+{% if scan_session.auto_remediation %}
+<div class="card mt-5">
+    <div class="card-header bg-warning text-dark">
+        🛠️ Auto Remediation Suggestions
+    </div>
+    <div class="card-body">
+        <p class="text-muted">We found files that probably shouldn't be in your repository. You may want to ignore or delete them.</p>
+        <ul class="list-group">
+            {% for item in scan_session.auto_remediation %}
+            <li class="list-group-item">
+                <strong>📄 {{ item.file }}</strong><br>
+                <span class="text-danger">Reason:</span> {{ item.reason }}<br>
+                <span class="text-success">Suggestion:</span> {{ item.suggestion }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
 
 {% block extra_js %}
 <script>
+// Function to get CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Handle false positive marking
     const falsePositiveBtns = document.querySelectorAll('.false-positive-btn');
@@ -243,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/finding/${findingId}/false-positive/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': getCookie('csrftoken'),
                     'Content-Type': 'application/json',
                 },
             })

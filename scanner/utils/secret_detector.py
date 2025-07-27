@@ -43,18 +43,27 @@ class SecretDetector:
             'aws_key': {
                 'pattern': r'AKIA[0-9A-Z]{16}',
                 'severity': 'high',
-                'description': 'AWS Access Key ID'
+                'description': 'AWS Access Key ID',
+                'false_positive_patterns': [r'AKIAIOSFODNN7EXAMPLE', r'AKIAI44QH8DHBEXAMPLE']
             },
             'aws_secret': {
-                'pattern': r'[A-Za-z0-9/+=]{40}',
+                'pattern': r'(?i)(aws.{0,20}secret.{0,20}[=:\s]["\']?)([A-Za-z0-9/+=]{40})(["\']?)',
                 'severity': 'high',
                 'description': 'AWS Secret Access Key',
-                'context_required': ['aws', 'secret', 'key']
+                'extract_group': 2,
+                'false_positive_patterns': [
+                    r'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+                    r'your.{0,10}aws.{0,10}secret',
+                    r'example.{0,10}secret',
+                    r'<.*secret.*>',
+                    r'\{.*secret.*\}'
+                ]
             },
             'gcp_key': {
-                'pattern': r'"type":\s*"service_account"',
+                'pattern': r'"type"\s*:\s*"service_account"',
                 'severity': 'high',
-                'description': 'GCP Service Account Key'
+                'description': 'GCP Service Account Key',
+                'context_required': ['private_key', 'client_email']
             },
             'jwt_token': {
                 'pattern': r'eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*',
@@ -64,7 +73,20 @@ class SecretDetector:
             'db_url': {
                 'pattern': r'(mongodb|mysql|postgresql|postgres)://[^\s]+',
                 'severity': 'high',
-                'description': 'Database Connection URL'
+                'description': 'Database Connection URL',
+                'false_positive_patterns': [
+                    r'://localhost',
+                    r'://127\.0\.0\.1',
+                    r'://0\.0\.0\.0',
+                    r'://.*\.local',
+                    r'://example\.',
+                    r'://test\.',
+                    r'://dummy\.',
+                    r'://sample\.',
+                    r'://.*example.*',
+                    r'://.*test.*',
+                    r'://.*dummy.*'
+                ]
             },
             'email_password': {
                 'pattern': r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}:[^\s]+',
@@ -77,14 +99,36 @@ class SecretDetector:
                 'description': 'Private Key'
             },
             'api_key': {
-                'pattern': r'[aA][pP][iI][_]?[kK][eE][yY][\'"\s]*[:=][\'"\s]*[A-Za-z0-9_-]{20,}',
+                'pattern': r'(?i)(api.{0,10}key.{0,10}[=:\s]["\']?)([A-Za-z0-9_-]{20,})(["\']?)',
                 'severity': 'medium',
-                'description': 'API Key'
+                'description': 'API Key',
+                'extract_group': 2,
+                'min_length': 20,
+                'false_positive_patterns': [
+                    r'your.{0,10}(api.{0,10})?key',
+                    r'example.{0,10}key',
+                    r'test.{0,10}key',
+                    r'sample.{0,10}key',
+                    r'dummy.{0,10}key',
+                    r'placeholder.{0,10}key',
+                    r'your_.*_key',
+                    r'<.*key.*>',
+                    r'\{.*key.*\}',
+                    r'\[.*key.*\]'
+                ]
             },
             'oauth_token': {
-                'pattern': r'[oO][aA][uU][tT][hH][_]?[tT][oO][kK][eE][nN][\'"\s]*[:=][\'"\s]*[A-Za-z0-9_-]{20,}',
+                'pattern': r'(?i)(oauth.{0,10}token.{0,10}[=:\s]["\']?)([A-Za-z0-9_-]{20,})(["\']?)',
                 'severity': 'medium',
-                'description': 'OAuth Token'
+                'description': 'OAuth Token',
+                'extract_group': 2,
+                'min_length': 20,
+                'false_positive_patterns': [
+                    r'your.{0,10}oauth.{0,10}token',
+                    r'example.{0,10}token',
+                    r'<.*token.*>',
+                    r'\{.*token.*\}'
+                ]
             },
             'ssh_key': {
                 'pattern': r'ssh-rsa [A-Za-z0-9+/]+[=]{0,3}',
@@ -105,7 +149,7 @@ class SecretDetector:
             '.pytest_cache', '.mypy_cache', 'dist', 'build', '.idea', '.vscode'
         }
 
-    def scan_directory(self, directory_path: str) -> List[Dict]:
+    def scan_directory(self, directory_path: str, commit_info: Dict = None) -> List[Dict]:
         """Scan a directory for secrets and return findings."""
         findings = []
         
@@ -120,7 +164,7 @@ class SecretDetector:
                     continue
 
                 try:
-                    file_findings = self.scan_file(file_path, relative_path)
+                    file_findings = self.scan_file(file_path, relative_path, commit_info)
                     findings.extend(file_findings)
                 except Exception as e:
                     print(f"Error scanning {file_path}: {e}")
@@ -128,7 +172,7 @@ class SecretDetector:
         
         return findings
 
-    def scan_file(self, file_path: str, relative_path: str) -> List[Dict]:
+    def scan_file(self, file_path: str, relative_path: str, commit_info: Dict = None) -> List[Dict]:
         """Scan a single file for secrets."""
         findings = []
         
@@ -139,12 +183,12 @@ class SecretDetector:
             return findings
         
         for line_num, line in enumerate(lines, 1):
-            line_findings = self.scan_line(line, relative_path, line_num, lines)
+            line_findings = self.scan_line(line, relative_path, line_num, lines, commit_info)
             findings.extend(line_findings)
         
         return findings
 
-    def scan_line(self, line: str, file_path: str, line_num: int, all_lines: List[str]) -> List[Dict]:
+    def scan_line(self, line: str, file_path: str, line_num: int, all_lines: List[str], commit_info: Dict = None) -> List[Dict]:
         """Scan a single line for secrets."""
         findings = []
         
@@ -153,10 +197,28 @@ class SecretDetector:
             matches = re.finditer(pattern, line, re.IGNORECASE)
             
             for match in matches:
+                # Extract the actual secret (use specific group if defined)
+                extract_group = config.get('extract_group', 0)
+                matched_text = match.group(extract_group)
+                
+                # Check minimum length requirements
+                min_length = config.get('min_length', 0)
+                if len(matched_text) < min_length:
+                    continue
+                
+                # Check for false positives
+                if self._is_false_positive(matched_text, config.get('false_positive_patterns', [])):
+                    continue
+                
                 # Check if context is required
                 if 'context_required' in config:
-                    if not self._check_context(line.lower(), config['context_required']):
+                    context_text = ' '.join(all_lines[max(0, line_num-3):min(len(all_lines), line_num+2)])
+                    if not self._check_context(context_text.lower(), config['context_required']):
                         continue
+                
+                # Additional context-based filtering for common false positives
+                if self._is_documentation_or_example(file_path, line, all_lines, line_num):
+                    continue
                 
                 # Get context lines
                 context_before = self._get_context_lines(all_lines, line_num - 1, -2, 0)
@@ -167,11 +229,20 @@ class SecretDetector:
                     'line_number': line_num,
                     'secret_type': secret_type,
                     'severity': config['severity'],
-                    'matched_text': match.group(),
+                    'matched_text': matched_text,
                     'context_before': context_before,
                     'context_after': context_after,
                     'description': config['description']
                 }
+                
+                # Add commit info if available (for deep scan)
+                if commit_info:
+                    finding.update({
+                        'commit_hash': commit_info.get('hash'),
+                        'commit_message': commit_info.get('message'),
+                        'commit_author': commit_info.get('author'),
+                        'commit_date': commit_info.get('date')
+                    })
                 
                 findings.append(finding)
         
@@ -182,9 +253,76 @@ class SecretDetector:
         _, ext = os.path.splitext(filename.lower())
         return ext in self.file_extensions or filename.lower() in ['.env', 'dockerfile', 'makefile']
 
-    def _check_context(self, line: str, required_words: List[str]) -> bool:
-        """Check if the line contains required context words."""
-        return any(word in line for word in required_words)
+    def _is_false_positive(self, text: str, false_positive_patterns: List[str]) -> bool:
+        """Check if the matched text is a known false positive."""
+        # Common false positive patterns
+        common_false_positives = [
+            r'^your_.*',
+            r'^example.*',
+            r'^test.*',
+            r'^sample.*',
+            r'^dummy.*',
+            r'^placeholder.*',
+            r'^<.*>$',
+            r'^\{.*\}$',
+            r'^\[.*\]$',
+            r'.*example.*',
+            r'.*placeholder.*',
+            r'.*your.*key.*',
+            r'.*your.*token.*',
+            r'.*your.*secret.*'
+        ]
+        
+        # Check common patterns first
+        for pattern in common_false_positives:
+            if re.search(pattern, text, re.IGNORECASE):
+                return True
+        
+        # Check specific patterns
+        for pattern in false_positive_patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return True
+        
+        return False
+    
+    def _is_documentation_or_example(self, file_path: str, line: str, all_lines: List[str], line_num: int) -> bool:
+        """Check if the finding is in documentation or example code."""
+        # Check file path indicators
+        doc_indicators = ['readme', 'doc', 'example', 'sample', 'demo', 'test']
+        if any(indicator in file_path.lower() for indicator in doc_indicators):
+            return True
+        
+        # Check surrounding context for documentation patterns
+        context_start = max(0, line_num - 5)
+        context_end = min(len(all_lines), line_num + 5)
+        context_lines = all_lines[context_start:context_end]
+        context_text = ' '.join(context_lines).lower()
+        
+        doc_patterns = [
+            r'example',
+            r'sample',
+            r'replace.*with',
+            r'your.*here',
+            r'todo',
+            r'fixme',
+            r'placeholder',
+            r'dummy',
+            r'#.*example',
+            r'//.*example',
+            r'<!--.*example',
+            r'```',  # Code blocks in markdown
+            r'`.*`'  # Inline code in markdown
+        ]
+        
+        for pattern in doc_patterns:
+            if re.search(pattern, context_text):
+                return True
+        
+        return False
+    
+    def _check_context(self, text: str, required_words: List[str]) -> bool:
+        """Check if the text contains required context words."""
+        return any(word in text for word in required_words)
 
     def _get_context_lines(self, lines: List[str], current_line: int, start_offset: int, end_offset: int) -> str:
         """Get context lines around the current line."""

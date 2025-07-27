@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
-from .forms import CustomUserCreationForm, GitScanForm, ZipUploadForm, ContactForm
+from .forms import CustomUserCreationForm, GitScanForm, GitDeepScanForm, ZipUploadForm, ContactForm
 from .models import ScanSession, SecretFinding, UserProfile
 from .utils.secret_detector import SecretDetector
 from .utils.git_handler import GitHandler
@@ -92,8 +92,9 @@ def dashboard(request):
 
 @login_required
 def scan_form(request):
-    """Scan form view with both Git URL and ZIP upload options."""
+    """Scan form view with Git URL, Deep Scan, and ZIP upload options."""
     git_form = GitScanForm()
+    git_deep_form = GitDeepScanForm()
     zip_form = ZipUploadForm()
     
     if request.method == 'POST':
@@ -104,6 +105,15 @@ def scan_form(request):
             if git_form.is_valid():
                 return process_git_scan(request, git_form.cleaned_data['repository_url'])
         
+        elif scan_type == 'git_deep':
+            git_deep_form = GitDeepScanForm(request.POST)
+            if git_deep_form.is_valid():
+                return process_git_deep_scan(
+                    request, 
+                    git_deep_form.cleaned_data['repository_url'],
+                    git_deep_form.cleaned_data['max_commits']
+                )
+        
         elif scan_type == 'zip_upload':
             zip_form = ZipUploadForm(request.POST, request.FILES)
             if zip_form.is_valid():
@@ -111,6 +121,7 @@ def scan_form(request):
     
     context = {
         'git_form': git_form,
+        'git_deep_form': git_deep_form,
         'zip_form': zip_form,
     }
     
@@ -140,6 +151,9 @@ def process_git_scan(request, repository_url):
         # Scan for secrets
         detector = SecretDetector()
         findings = detector.scan_directory(temp_dir)
+        scan_session.auto_remediation = detector.auto_remediation
+        scan_session.save()
+
         
         # Save findings to database
         save_findings_to_db(scan_session, findings)
@@ -165,6 +179,76 @@ def process_git_scan(request, repository_url):
         scan_session.save()
         messages.error(request, f'Scan failed: {str(e)}')
         return redirect('scan_form')
+
+def process_git_deep_scan(request, repository_url, max_commits):
+    """Process Git repository deep scan (all commits)."""
+    # Create scan session
+    scan_session = ScanSession.objects.create(
+        user=request.user,
+        scan_type='git_deep',
+        repository_url=repository_url,
+        status='processing',
+        is_deep_scan=True
+    )
+    
+    try:
+        # Clone repository with full history
+        git_handler = GitHandler()
+        temp_dir, error = git_handler.clone_repository(repository_url, deep_scan=True)
+        
+        if error:
+            scan_session.status = 'failed'
+            scan_session.save()
+            messages.error(request, f'Failed to clone repository: {error}')
+            return redirect('scan_form')
+        
+        # Get commit history
+        commits = git_handler.get_commit_history(temp_dir, max_commits)
+        scan_session.commits_scanned = len(commits)
+        scan_session.save()
+        
+        # Scan each commit
+        detector = SecretDetector()
+        all_findings = []
+        
+        for i, commit in enumerate(commits):
+            # Update progress (you could add a progress field to track this)
+            print(f"Scanning commit {i+1}/{len(commits)}: {commit['hash'][:8]}")
+            
+            # Checkout commit
+            if git_handler.checkout_commit(temp_dir, commit['hash']):
+                # Scan this commit
+                commit_findings = detector.scan_directory(temp_dir, commit)
+                all_findings.extend(commit_findings)
+        
+        scan_session.auto_remediation = detector.auto_remediation
+        scan_session.save()
+        
+        # Save findings to database
+        save_findings_to_db(scan_session, all_findings)
+        
+        # Update scan session
+        scan_session.status = 'completed'
+        scan_session.completed_at = timezone.now()
+        scan_session.total_files_scanned = count_scanned_files(temp_dir)
+        scan_session.secrets_found = len(all_findings)
+        scan_session.save()
+        
+        # Send email notifications
+        send_scan_notifications(request.user, scan_session, all_findings)
+        
+        # Cleanup
+        git_handler.cleanup_temp_dirs()
+        
+        messages.success(request, f'Deep scan completed! Scanned {len(commits)} commits and found {len(all_findings)} potential secrets.')
+        return redirect('scan_result', scan_id=scan_session.id)
+        
+    except Exception as e:
+        scan_session.status = 'failed'
+        scan_session.save()
+        messages.error(request, f'Deep scan failed: {str(e)}')
+        return redirect('scan_form')
+
 def process_zip_scan(request, zip_file):
     """Process ZIP file scan."""
     # Create scan session
@@ -230,6 +314,10 @@ def save_findings_to_db(scan_session, findings):
             matched_text=finding['matched_text'][:500],  # Truncate if too long
             context_before=finding.get('context_before', ''),
             context_after=finding.get('context_after', ''),
+            commit_hash=finding.get('commit_hash', ''),
+            commit_message=finding.get('commit_message', ''),
+            commit_author=finding.get('commit_author', ''),
+            commit_date=finding.get('commit_date'),
         )
 
 def count_scanned_files(directory):
@@ -365,3 +453,14 @@ def api_scan_status(request, scan_id):
         'total_files_scanned': scan_session.total_files_scanned,
         'completed_at': scan_session.completed_at.isoformat() if scan_session.completed_at else None,
     })
+@login_required
+def download_remediation(request, scan_id):
+    scan_session = get_object_or_404(ScanSession, id=scan_id, user=request.user)
+    remediation = getattr(scan_session, 'auto_remediation', [])
+
+    response = HttpResponse(
+        json.dumps(remediation, indent=2),
+        content_type='application/json'
+    )
+    response['Content-Disposition'] = f'attachment; filename="remediation_{scan_id}.json"'
+    return response

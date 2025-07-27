@@ -30,6 +30,27 @@ class GitScanForm(forms.Form):
         }),
         help_text="Enter the URL of the Git repository to scan"
     )
+    
+class GitDeepScanForm(forms.Form):
+    repository_url = forms.URLField(
+        label="Git Repository URL",
+        widget=forms.URLInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'https://github.com/username/repository.git'
+        }),
+        help_text="Enter the URL of the Git repository for deep scan (all commits)"
+    )
+    max_commits = forms.IntegerField(
+        label="Maximum Commits to Scan",
+        initial=100,
+        min_value=1,
+        max_value=1000,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '100'
+        }),
+        help_text="Limit the number of commits to scan (1-1000)"
+    )
 
 class ZipUploadForm(forms.Form):
     zip_file = forms.FileField(

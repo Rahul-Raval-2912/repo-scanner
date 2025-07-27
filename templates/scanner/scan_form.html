@@ -24,6 +24,11 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="deep-tab" data-bs-toggle="tab" data-bs-target="#deep-pane" type="button" role="tab">
+                                <i class="bi bi-clock-history"></i> Deep Scan
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="zip-tab" data-bs-toggle="tab" data-bs-target="#zip-pane" type="button" role="tab">
                                 <i class="bi bi-file-zip"></i> ZIP Upload
                             </button>
@@ -53,6 +58,37 @@
                                             <li>HTTPS URLs only</li>
                                             <li>Clones latest commit</li>
                                             <li>Temporary storage</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Deep Scan Tab -->
+                        <div class="tab-pane fade" id="deep-pane" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <form method="post" id="deepForm">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="scan_type" value="git_deep">
+                                        {{ git_deep_form|crispy }}
+                                        <div class="alert alert-warning mt-3">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            <strong>Warning:</strong> Deep scan analyzes commit history and may take significantly longer.
+                                        </div>
+                                        <button type="submit" class="btn btn-warning btn-lg">
+                                            <i class="bi bi-clock-history"></i> Start Deep Scan
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="alert alert-info">
+                                        <h6><i class="bi bi-info-circle"></i> Deep Scan Features</h6>
+                                        <ul class="mb-0 small">
+                                            <li>Scans commit history</li>
+                                            <li>Finds secrets in past commits</li>
+                                            <li>Configurable commit limit</li>
+                                            <li>Longer processing time</li>
                                         </ul>
                                     </div>
                                 </div>

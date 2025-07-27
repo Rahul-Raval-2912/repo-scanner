@@ -27,8 +27,11 @@ urlpatterns = [
     
     # Reports and downloads
     path('scan/<uuid:scan_id>/download/<str:format_type>/', views.download_report, name='download_report'),
+    path('scan/<uuid:scan_id>/download/remediation/', views.download_remediation, name='download_remediation'),
+
     
     # API endpoints
     path('api/scan/<uuid:scan_id>/status/', views.api_scan_status, name='api_scan_status'),
     path('api/finding/<int:finding_id>/false-positive/', views.mark_false_positive, name='mark_false_positive'),
+
 ]

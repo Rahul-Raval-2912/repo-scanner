@@ -2,11 +2,13 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 import uuid
+from django.db.models import JSONField
 
 class ScanSession(models.Model):
     SCAN_TYPES = [
         ('git_url', 'Git URL'),
         ('zip_upload', 'ZIP Upload'),
+        ('git_deep', 'Git Deep Scan'),
     ]
     
     STATUS_CHOICES = [
@@ -26,6 +28,9 @@ class ScanSession(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     total_files_scanned = models.IntegerField(default=0)
     secrets_found = models.IntegerField(default=0)
+    commits_scanned = models.IntegerField(default=0)
+    is_deep_scan = models.BooleanField(default=False)
+    auto_remediation = JSONField(default=list, blank=True, null=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -61,6 +66,10 @@ class SecretFinding(models.Model):
     matched_text = models.TextField()
     context_before = models.TextField(blank=True)
     context_after = models.TextField(blank=True)
+    commit_hash = models.CharField(max_length=40, blank=True, null=True)
+    commit_message = models.TextField(blank=True, null=True)
+    commit_author = models.CharField(max_length=255, blank=True, null=True)
+    commit_date = models.DateTimeField(blank=True, null=True)
     is_false_positive = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
     
