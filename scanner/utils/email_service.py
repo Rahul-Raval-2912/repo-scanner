@@ -6,6 +6,8 @@ from typing import List, Dict, Optional
 import logging
 from functools import lru_cache
 
+from scanner.models import ScanSession
+
 logger = logging.getLogger(__name__)
 
 class EmailService:
@@ -150,7 +152,7 @@ class EmailService:
                 'email': email,
                 'subject': subject,
                 'message': message,
-                'timestamp': scan_session.created_at if 'scan_session' in locals() else None,
+                'timestamp': ScanSession.created_at if 'scan_session' in locals() else None,
             }
             
             return self._send_templated_email(

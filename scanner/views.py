@@ -401,32 +401,34 @@ def download_report(request, scan_id, format_type):
     scan_session = get_object_or_404(ScanSession, id=scan_id, user=request.user)
     findings = SecretFinding.objects.filter(scan_session=scan_session)
     
-    # Convert findings to dict format
+    # Convert findings to dict format with enhanced data
     findings_data = []
     for finding in findings:
         findings_data.append({
+            'type': finding.secret_type,
             'file_path': finding.file_path,
             'line_number': finding.line_number,
-            'secret_type': finding.secret_type,
             'severity': finding.severity,
+            'description': f"{finding.secret_type} detected in {finding.file_path}",
+            'code_snippet': f"{finding.context_before}\n{finding.matched_text}\n{finding.context_after}",
             'matched_text': finding.matched_text,
             'context_before': finding.context_before,
             'context_after': finding.context_after,
+            'recommendation': f"Remove or secure the {finding.secret_type} from the codebase",
+            'confidence': 'High',
+            'commit_hash': finding.commit_hash,
+            'commit_message': finding.commit_message,
+            'commit_author': finding.commit_author,
         })
     
-    report_generator = ReportGenerator(scan_session, findings_data)
-    
-    if format_type == 'pdf':
-        return report_generator.get_pdf_response()
-    elif format_type == 'json':
-        return report_generator.get_json_response()
-    elif format_type == 'html':
-        html_content = report_generator.generate_html_report()
-        response = HttpResponse(html_content, content_type='text/html')
-        response['Content-Disposition'] = f'attachment; filename="security_scan_{scan_id}.html"'
-        return response
-    else:
-        messages.error(request, 'Invalid report format requested.')
+    try:
+        report_generator = ReportGenerator(scan_session, findings_data)
+        return report_generator.get_response(format_type)
+    except ValueError as e:
+        messages.error(request, str(e))
+        return redirect('scan_result', scan_id=scan_id)
+    except Exception as e:
+        messages.error(request, f'Failed to generate {format_type.upper()} report: {str(e)}')
         return redirect('scan_result', scan_id=scan_id)
 
 @login_required
